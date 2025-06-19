@@ -36,7 +36,7 @@ namespace UniversalTranslationFramework
 
         static TranslationFrameworkMod()
         {
-            // 使用LongEventHandler进行异步初始化，避免阻塞游戏启动
+            // Use LongEventHandler for asynchronous initialization to avoid blocking game startup
             LongEventHandler.QueueLongEvent(() => InitializeFramework(), "Loading Universal Translation Framework", false, null);
         }
 
@@ -54,11 +54,11 @@ namespace UniversalTranslationFramework
                     
                     _harmony = new Harmony(FRAMEWORK_HARMONY_ID);
                     
-                    // 触发延迟加载
+                    // Trigger lazy loading
                     var patches = _patches.Value;
                     ApplyAllPatches(patches);
                     
-                    Log.Message($"[UTF] Universal Translation Framework started successfully! Loaded {patches.Count} translation patches.");
+                    // Log.Message($"[UTF] Universal Translation Framework started successfully! Loaded {patches.Count} translation patches.");
                     _initialized = true;
                 }
                 catch (Exception ex)
@@ -78,7 +78,7 @@ namespace UniversalTranslationFramework
 
             try
             {
-                // 检查是否支持并行处理
+                // Check if parallel processing is supported
                 if (Environment.ProcessorCount > 1)
                 {
                     var parallelOptions = new ParallelOptions 
@@ -86,7 +86,7 @@ namespace UniversalTranslationFramework
                         MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
                     };
 
-                    // 并行处理mod扫描
+                    // Parallel mod scanning
                     Parallel.ForEach(LoadedModManager.RunningMods, parallelOptions, mod =>
                     {
                         var modPatches = ScanModForPatches(mod);
@@ -98,7 +98,7 @@ namespace UniversalTranslationFramework
                 }
                 else
                 {
-                    // 单线程处理（兼容性回退）
+                    // Single-threaded processing (compatibility fallback)
                     foreach (var mod in LoadedModManager.RunningMods)
                     {
                         var modPatches = ScanModForPatches(mod);
@@ -110,7 +110,7 @@ namespace UniversalTranslationFramework
             {
                 Log.Error($"[UTF] Error during parallel processing, falling back to sequential: {ex.Message}");
                 
-                // 回退到单线程处理
+                // Fallback to single-threaded processing
                 discoveredPatches.Clear();
                 foreach (var mod in LoadedModManager.RunningMods)
                 {
@@ -139,9 +139,9 @@ namespace UniversalTranslationFramework
 
             try
             {
-                Log.Message($"[UTF] Scanning Patches directory of mod '{mod.Name}': {patchesDir}");
+                // Log.Message($"[UTF] Scanning Patches directory of mod '{mod.Name}': {patchesDir}");
                 
-                // 使用EnumerateFiles避免一次性加载所有文件到内存
+                // Use EnumerateFiles to avoid loading all files into memory at once
                 var translationFiles = Directory.EnumerateFiles(patchesDir, "*StringTranslation*.xml", 
                     SearchOption.AllDirectories);
 
@@ -177,7 +177,7 @@ namespace UniversalTranslationFramework
             
             try
             {
-                // 使用更安全的XML加载方式
+                // Use safer XML loading method
                 XDocument doc;
                 try
                 {
@@ -195,7 +195,7 @@ namespace UniversalTranslationFramework
                 }
                 catch (Exception)
                 {
-                    // 回退到简单加载方式
+                    // Fallback to simple loading method
                     doc = XDocument.Load(filePath);
                 }
 
@@ -207,7 +207,7 @@ namespace UniversalTranslationFramework
                     return patches;
                 }
 
-                // 查找相关的操作
+                // Find related operations
                 var operations = root.Elements("Operation")
                     .Where(op => op.Attribute("Class")?.Value == "UniversalTranslationFramework.PatchOperationStringTranslate");
 
@@ -335,12 +335,12 @@ namespace UniversalTranslationFramework
             var appliedCount = 0;
             var failedCount = 0;
 
-            // 按类型分组，减少重复的类型查找
+            // Group by type to reduce redundant type lookups
             var patchesByType = patches.GroupBy(p => p.TargetTypeName).ToList();            foreach (var typeGroup in patchesByType)
             {
                 try
                 {
-                    // 使用增强的类型查找，支持状态机类型
+                    // Use enhanced type lookup, support for state machine types
                     var firstPatch = typeGroup.First();
                     var targetType = FindTypeWithStateMachineSupport(typeGroup.Key, firstPatch.TargetMethodName, firstPatch.TargetAssembly);
                     if (targetType == null)
@@ -378,7 +378,9 @@ namespace UniversalTranslationFramework
             }
 
             Log.Message($"[UTF] Patch application complete: {appliedCount} succeeded, {failedCount} failed");
-        }        /// <summary>
+        }
+
+        /// <summary>
         /// Apply a single translation patch with intelligent state machine detection
         /// </summary>
         private static bool ApplyTranslationPatchOptimized(TranslationPatch patch, Type targetType)
@@ -397,18 +399,18 @@ namespace UniversalTranslationFramework
                     targetMethod = AccessTools.Method(targetType, "MoveNext");
                     Log.Message($"[UTF] Direct state machine type detected: {targetType.FullName}.MoveNext");
                 }
-                else 
+                else
                 {
                     // 2. 尝试在原始类型上查找方法
                     targetMethod = AccessTools.Method(targetType, patch.TargetMethodName);
-                    
+
                     if (targetMethod != null)
                     {
                         // 3. 方法找到了，但检查是否需要使用状态机
                         if (IsIteratorMethod(targetMethod) || IsAsyncMethod(targetMethod))
                         {
                             Log.Message($"[UTF] Found iterator/async method {targetType.FullName}.{patch.TargetMethodName}, searching for state machine...");
-                            
+
                             // 查找对应的状态机类型
                             var stateMachineType = FindStateMachineType(targetType.FullName, patch.TargetMethodName);
                             if (stateMachineType != null)
@@ -416,7 +418,7 @@ namespace UniversalTranslationFramework
                                 actualTargetType = stateMachineType;
                                 actualMethodName = "MoveNext";
                                 targetMethod = AccessTools.Method(stateMachineType, "MoveNext");
-                                
+
                                 if (targetMethod != null)
                                 {
                                     Log.Message($"[UTF] ✓ Auto-converted {patch.TargetTypeName}.{patch.TargetMethodName} -> {stateMachineType.FullName}.MoveNext");
@@ -435,21 +437,21 @@ namespace UniversalTranslationFramework
                         }
                         else
                         {
-                            Log.Message($"[UTF] Regular method found: {targetType.FullName}.{patch.TargetMethodName}");
+                            // Log.Message($"[UTF] Regular method found: {targetType.FullName}.{patch.TargetMethodName}");
                         }
                     }
                     else
                     {
                         // 4. 原始方法未找到，尝试状态机检测
                         Log.Message($"[UTF] Method {patch.TargetTypeName}.{patch.TargetMethodName} not found, attempting state machine detection...");
-                        
+
                         var stateMachineType = FindStateMachineType(targetType.FullName, patch.TargetMethodName);
                         if (stateMachineType != null)
                         {
                             actualTargetType = stateMachineType;
                             actualMethodName = "MoveNext";
                             targetMethod = AccessTools.Method(stateMachineType, "MoveNext");
-                            
+
                             if (targetMethod != null)
                             {
                                 Log.Message($"[UTF] ✓ Auto-discovered state machine: {stateMachineType.FullName}.MoveNext");
@@ -506,14 +508,14 @@ namespace UniversalTranslationFramework
         /// </summary>
         private static Type FindTypeOptimized(string typeName, string assemblyName = null)
         {
-            // 构建缓存键
+            // Build cache key
             var cacheKey = string.IsNullOrEmpty(assemblyName) ? typeName : $"{assemblyName}:{typeName}";
             
             return _typeCache.GetOrAdd(cacheKey, key =>
             {
                 try
                 {
-                    // 如果指定了程序集，优先从该程序集查找
+                    // If an assembly is specified, look up from that assembly first
                     if (!string.IsNullOrEmpty(assemblyName))
                     {
                         var assembly = _assemblyCache.GetOrAdd(assemblyName, name =>
@@ -523,20 +525,20 @@ namespace UniversalTranslationFramework
                                 // 尝试多种方式加载程序集
                                 Assembly asm = null;
                                 
-                                // 方式1: 直接从文件加载
+                                // Method 1: Load directly from file
                                 if (File.Exists(name))
                                 {
                                     asm = Assembly.LoadFrom(name);
                                 }
                                 
-                                // 方式2: 从已加载的程序集中查找
+                                // Method 2: Search from already loaded assemblies
                                 if (asm == null)
                                 {
                                     asm = AppDomain.CurrentDomain.GetAssemblies()
                                         .FirstOrDefault(a => a.GetName().Name == Path.GetFileNameWithoutExtension(name));
                                 }
                                 
-                                // 方式3: 尝试Load方法
+                                // Method 3: Try Load method
                                 if (asm == null)
                                 {
                                     asm = Assembly.Load(name);
@@ -558,7 +560,7 @@ namespace UniversalTranslationFramework
                         }
                     }
 
-                    // 回退到AccessTools搜索
+                    // Fallback to AccessTools search
                     return AccessTools.TypeByName(typeName);
                 }
                 catch (Exception ex)
@@ -570,7 +572,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 自动发现状态机类型（如async/await或yield return生成的状态机）
+        /// Automatically discover state machine types (such as those generated by async/await or yield return)
         /// </summary>
         private static Type FindStateMachineType(string baseTypeName, string methodName)
         {
@@ -584,10 +586,10 @@ namespace UniversalTranslationFramework
                     return null;
                 }
 
-                // 获取所有嵌套类型
+                // Get all nested types
                 var nestedTypes = baseType.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public);
                 
-                // 查找状态机类型的常见命名模式
+                // Search for common state machine naming patterns
                 var stateMachinePatterns = new[]
                 {
                     $"<{methodName}>d__",     // 标准编译器生成的状态机模式
@@ -605,7 +607,7 @@ namespace UniversalTranslationFramework
                     {
                         if (typeName.StartsWith(pattern))
                         {
-                            Log.Message($"[UTF] Found state machine type: {nestedType.FullName}");
+                            // Log.Message($"[UTF] Found state machine type: {nestedType.FullName}");
                             return nestedType;
                         }
                     }
@@ -633,21 +635,21 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 增强的类型查找方法，支持自动状态机检测
+        /// Enhanced type lookup method, supports automatic state machine detection
         /// </summary>
         private static Type FindTypeWithStateMachineSupport(string typeName, string methodName, string assemblyName = null)
         {
-            // 首先尝试直接查找类型
+            // First try direct type lookup
             var directType = FindTypeOptimized(typeName, assemblyName);
             if (directType != null)
             {
                 return directType;
             }
 
-            // 如果直接查找失败，检查是否是状态机类型格式
+            // If direct lookup fails, check if it is a state machine type format
             if (typeName.Contains("<") && typeName.Contains(">") && typeName.Contains("d__"))
             {
-                // 这看起来像是一个状态机类型，尝试解析基础类型
+                // Looks like a state machine type, try to parse base type
                 var baseTypeName = ExtractBaseTypeFromStateMachine(typeName);
                 var extractedMethodName = ExtractMethodNameFromStateMachine(typeName);
                 
@@ -657,7 +659,7 @@ namespace UniversalTranslationFramework
                 }
             }
 
-            // 如果提供了方法名，尝试从基础类型查找状态机
+            // If method name is provided, try to find state machine from base type
             if (!string.IsNullOrEmpty(methodName))
             {
                 return FindStateMachineType(typeName, methodName);
@@ -667,8 +669,8 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 从状态机类型名称中提取基础类型名称
-        /// 例如：MechCaller.MechConsole+<GetGizmos>d__7 -> MechCaller.MechConsole
+        /// Extract base type name from state machine type name
+        /// Example: MechCaller.MechConsole+<GetGizmos>d__7 -> MechCaller.MechConsole
         /// </summary>
         private static string ExtractBaseTypeFromStateMachine(string stateMachineTypeName)
         {
@@ -695,8 +697,8 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 从状态机类型名称中提取方法名称
-        /// 例如：MechCaller.MechConsole+<GetGizmos>d__7 -> GetGizmos
+        /// Extract method name from state machine type name
+        /// Example: MechCaller.MechConsole+<GetGizmos>d__7 -> GetGizmos
         /// </summary>
         private static string ExtractMethodNameFromStateMachine(string stateMachineTypeName)
         {
@@ -719,20 +721,20 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 检查类型是否为状态机类型
+        /// Check if type is a state machine type
         /// </summary>
         private static bool IsStateMachineType(Type type)
         {
             if (type == null) return false;
             
-            // 检查类型名称是否包含状态机特征
+            // Check if type name contains state machine features
             var typeName = type.Name;
             if (typeName.Contains("d__") && typeName.Contains("<") && typeName.Contains(">"))
             {
                 return true;
             }
             
-            // 检查是否实现了相关接口
+            // Check if implements related interfaces
             var interfaces = type.GetInterfaces();
             return interfaces.Any(i => i.Name == "IEnumerator" || 
                                      i.Name == "IAsyncStateMachine" ||
@@ -740,7 +742,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 智能状态机检测：检查方法是否可能是迭代器或异步方法
+        /// Smart state machine detection: check if method is likely an iterator or async method
         /// </summary>
         private static bool IsPotentialStateMachineMethod(Type type, string methodName)
         {
@@ -754,7 +756,7 @@ namespace UniversalTranslationFramework
                 // 检查返回类型是否表明这是一个迭代器或异步方法
                 var returnType = method.ReturnType;
                 
-                // 迭代器方法通常返回 IEnumerable<T> 或 IEnumerator<T>
+                // Iterator methods usually return IEnumerable<T> or IEnumerator<T>
                 if (returnType.IsGenericType)
                 {
                     var genericTypeDef = returnType.GetGenericTypeDefinition();
@@ -767,7 +769,7 @@ namespace UniversalTranslationFramework
                     }
                 }
 
-                // 异步方法通常返回 Task 或 Task<T>
+                // Async methods usually return Task or Task<T>
                 if (returnType == typeof(System.Threading.Tasks.Task) || 
                     (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(System.Threading.Tasks.Task<>)))
                 {
@@ -792,7 +794,7 @@ namespace UniversalTranslationFramework
         {
             try
             {
-                // 检查返回类型是否是 IEnumerable 或 IEnumerator
+                // Check if return type is IEnumerable or IEnumerator
                 var returnType = method.ReturnType;
                 if (returnType == typeof(System.Collections.IEnumerable) ||
                     returnType == typeof(System.Collections.IEnumerator) ||
@@ -800,7 +802,7 @@ namespace UniversalTranslationFramework
                      (returnType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
                       returnType.GetGenericTypeDefinition() == typeof(IEnumerator<>))))
                 {
-                    // 进一步检查：查看是否有对应的状态机嵌套类型
+                    // Further check: see if there is a corresponding state machine nested type
                     var declaringType = method.DeclaringType;
                     if (declaringType != null)
                     {
@@ -831,13 +833,13 @@ namespace UniversalTranslationFramework
         {
             try
             {
-                // 检查返回类型是否是 Task 或 Task<T>
+                // Check if return type is Task or Task<T>
                 var returnType = method.ReturnType;
                 if (returnType == typeof(System.Threading.Tasks.Task) ||
                     (returnType.IsGenericType && 
                      returnType.GetGenericTypeDefinition() == typeof(System.Threading.Tasks.Task<>)))
                 {
-                    // 进一步检查：查看是否有对应的状态机嵌套类型
+                    // Further check: see if there is a corresponding state machine nested type
                     var declaringType = method.DeclaringType;
                     if (declaringType != null)
                     {
@@ -893,7 +895,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 智能补丁转换：自动将普通方法补丁转换为状态机补丁
+        /// Smart patch conversion: automatically convert normal method patches to state machine patches
         /// </summary>
         public static void ConvertToStateMachinePatch(string originalXmlPath, string outputXmlPath = null)
         {
@@ -931,13 +933,13 @@ namespace UniversalTranslationFramework
                     var targetTypeName = targetTypeElement.Value;
                     var targetMethodName = targetMethodElement.Value;
 
-                    // 尝试找到状态机类型
+                    // Try to find state machine type
                     var stateMachineType = FindStateMachineType(targetTypeName, targetMethodName);
                     if (stateMachineType != null)
                     {
-                        // 更新XML以使用状态机类型
+                        // Update XML to use state machine type
                         targetTypeElement.Value = stateMachineType.FullName;
-                        targetMethodElement.Value = "MoveNext"; // 状态机通常使用MoveNext方法
+                        targetMethodElement.Value = "MoveNext"; // State machines usually use MoveNext method
 
                         hasConversions = true;
                         Log.Message($"[UTF] Converted patch: {targetTypeName}.{targetMethodName} -> {stateMachineType.FullName}.MoveNext");
@@ -962,7 +964,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 批量转换Patches目录中的所有XML文件
+        /// Batch convert all XML files in the Patches directory
         /// </summary>
         public static void ConvertAllPatchesToStateMachine(string patchesDirectory)
         {
@@ -1002,7 +1004,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 生成状态机补丁的XML模板
+        /// Generate XML template for state machine patch
         /// </summary>
         public static string GenerateStateMachinePatchTemplate(string baseTypeName, string methodName, 
             Dictionary<string, string> translations)
@@ -1042,7 +1044,7 @@ namespace UniversalTranslationFramework
         }
 
         /// <summary>
-        /// 公共方法：查找状态机类型（用于调试）
+        /// Public method: find state machine type (for debugging)
         /// </summary>
         public static Type FindStateMachineTypePublic(string baseTypeName, string methodName)
         {
