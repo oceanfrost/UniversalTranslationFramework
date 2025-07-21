@@ -21,14 +21,15 @@ namespace UniversalTranslationFramework
         /// <param name="instructions">Original IL instruction sequence</param>
         /// <param name="original">Original method being patched</param>
         /// <returns>Modified IL instruction sequence</returns>
-        public static IEnumerable<CodeInstruction> ReplaceStrings(IEnumerable<CodeInstruction> instructions, MethodBase original)
+        public static IEnumerable<CodeInstruction> ReplaceStrings(IEnumerable<CodeInstruction> instructions,
+            MethodBase original)
         {
             // Construct the method identifier
             var methodId = $"{original.DeclaringType?.FullName}.{original.Name}";
-            
+
             // Get the translation mapping for this method
             var translations = TranslationCache.GetTranslations(methodId);
-            
+
             if (translations == null || translations.Count == 0)
             {
                 // No translations found; return the original instructions directly
@@ -37,17 +38,17 @@ namespace UniversalTranslationFramework
 
             var instructionList = instructions.ToList(); // 转换一次，避免多次枚举
             var replacedCount = 0;
-            
+
             // Iterate over all IL instructions
             for (int i = 0; i < instructionList.Count; i++)
             {
                 var instruction = instructionList[i];
-                
+
                 // Check if it's a string load instruction (ldstr)
                 if (instruction.opcode == OpCodes.Ldstr && instruction.operand is string originalString)
                 {
                     string translatedString = null;
-                    
+
                     // First try exact match (fastest)
                     if (translations.TryGetValue(originalString, out translatedString))
                     {
@@ -67,12 +68,12 @@ namespace UniversalTranslationFramework
                     }
                 }
             }
-            
+
             if (replacedCount > 0)
             {
-                // Log.Message($"[UTF] Replaced {replacedCount} strings in {methodId}");
+//                 // Log.Message($"[UTF] Replaced {replacedCount} strings in {methodId}");
             }
-            
+
             return instructionList;
         }
 
@@ -82,12 +83,13 @@ namespace UniversalTranslationFramework
         /// <param name="instructions">Original IL instruction sequence</param>
         /// <param name="original">Original method being patched</param>
         /// <returns>Unmodified IL instruction sequence</returns>
-        public static IEnumerable<CodeInstruction> DebugLogStrings(IEnumerable<CodeInstruction> instructions, MethodBase original)
+        public static IEnumerable<CodeInstruction> DebugLogStrings(IEnumerable<CodeInstruction> instructions,
+            MethodBase original)
         {
             var methodId = $"{original.DeclaringType?.FullName}.{original.Name}";
             var stringConstants = new List<string>();
             var instructionList = instructions.ToList();
-            
+
             foreach (var instruction in instructionList)
             {
                 if (instruction.opcode == OpCodes.Ldstr && instruction.operand is string str)
@@ -95,33 +97,35 @@ namespace UniversalTranslationFramework
                     stringConstants.Add(str);
                 }
             }
-            
+
             if (stringConstants.Count > 0)
             {
-                Log.Message($"[UTF DEBUG] {methodId} contains {stringConstants.Count} string constants:");
+//                 Log.Message($"[UTF DEBUG] {methodId} contains {stringConstants.Count} string constants:");
                 for (int i = 0; i < stringConstants.Count; i++)
                 {
-                    Log.Message($"  [{i}] \"{stringConstants[i]}\"");
+//                     Log.Message($"  [{i}] \"{stringConstants[i]}\"");
                 }
             }
-            
+
             return instructionList;
         }
 
         /// <summary>
         /// Performance monitoring transpiler for development
         /// </summary>
-        public static IEnumerable<CodeInstruction> MonitorPerformance(IEnumerable<CodeInstruction> instructions, MethodBase original)
+        public static IEnumerable<CodeInstruction> MonitorPerformance(IEnumerable<CodeInstruction> instructions,
+            MethodBase original)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var result = ReplaceStrings(instructions, original);
             stopwatch.Stop();
-            
+
             if (stopwatch.ElapsedMilliseconds > 10) // Log if transpilation takes more than 10ms
             {
-                Log.Warning($"[UTF PERF] Slow transpilation for {original.DeclaringType?.FullName}.{original.Name}: {stopwatch.ElapsedMilliseconds}ms");
+                Log.Warning(
+                    $"[UTF PERF] Slow transpilation for {original.DeclaringType?.FullName}.{original.Name}: {stopwatch.ElapsedMilliseconds}ms");
             }
-            
+
             return result;
         }
     }
@@ -131,7 +135,7 @@ namespace UniversalTranslationFramework
     /// </summary>
     public static class TranslationDebugTools
     {
-        private static readonly Dictionary<string, System.Diagnostics.Stopwatch> _methodTimers = 
+        private static readonly Dictionary<string, System.Diagnostics.Stopwatch> _methodTimers =
             new Dictionary<string, System.Diagnostics.Stopwatch>();
 
         /// <summary>
@@ -146,19 +150,20 @@ namespace UniversalTranslationFramework
                 var method = AccessTools.Method(targetType, methodName);
                 if (method == null)
                 {
-                    Log.Error($"[UTF DEBUG] Cannot find method: {targetType.FullName}.{methodName}");
+//                     Log.Error($"[UTF DEBUG] Cannot find method: {targetType.FullName}.{methodName}");
                     return;
                 }
 
                 var harmony = new Harmony("UTF.Debug.StringInspector");
-                var transpilerMethod = typeof(UniversalStringTranspiler).GetMethod(nameof(UniversalStringTranspiler.DebugLogStrings));
+                var transpilerMethod =
+                    typeof(UniversalStringTranspiler).GetMethod(nameof(UniversalStringTranspiler.DebugLogStrings));
                 harmony.Patch(method, transpiler: new HarmonyMethod(transpilerMethod));
-                
-                Log.Message($"[UTF DEBUG] Debug patch applied to {targetType.FullName}.{methodName}");
+
+//                 Log.Message($"[UTF DEBUG] Debug patch applied to {targetType.FullName}.{methodName}");
             }
             catch (Exception ex)
             {
-                Log.Error($"[UTF DEBUG] Error while debugging method: {ex.Message}");
+//                 Log.Error($"[UTF DEBUG] Error while debugging method: {ex.Message}");
             }
         }
 
@@ -172,19 +177,20 @@ namespace UniversalTranslationFramework
                 var method = AccessTools.Method(targetType, methodName);
                 if (method == null)
                 {
-                    Log.Error($"[UTF DEBUG] Cannot find method: {targetType.FullName}.{methodName}");
+//                     Log.Error($"[UTF DEBUG] Cannot find method: {targetType.FullName}.{methodName}");
                     return;
                 }
 
                 var harmony = new Harmony("UTF.Debug.PerformanceMonitor");
-                var transpilerMethod = typeof(UniversalStringTranspiler).GetMethod(nameof(UniversalStringTranspiler.MonitorPerformance));
+                var transpilerMethod =
+                    typeof(UniversalStringTranspiler).GetMethod(nameof(UniversalStringTranspiler.MonitorPerformance));
                 harmony.Patch(method, transpiler: new HarmonyMethod(transpilerMethod));
-                
-                Log.Message($"[UTF DEBUG] Performance monitoring applied to {targetType.FullName}.{methodName}");
+
+//                 Log.Message($"[UTF DEBUG] Performance monitoring applied to {targetType.FullName}.{methodName}");
             }
             catch (Exception ex)
             {
-                Log.Error($"[UTF DEBUG] Error while applying performance monitoring: {ex.Message}");
+//                 Log.Error($"[UTF DEBUG] Error while applying performance monitoring: {ex.Message}");
             }
         }
 
@@ -193,7 +199,7 @@ namespace UniversalTranslationFramework
         /// </summary>
         public static void PrintCacheStats()
         {
-            Log.Message($"[UTF DEBUG] Translation cache stats: {TranslationCache.GetCacheStats()}");
+//             Log.Message($"[UTF DEBUG] Translation cache stats: {TranslationCache.GetCacheStats()}");
         }
 
         /// <summary>
@@ -201,16 +207,16 @@ namespace UniversalTranslationFramework
         /// </summary>
         public static void PrintFrameworkStats()
         {
-            Log.Message($"[UTF DEBUG] Framework Status:");
-            Log.Message($"  Initialized: {TranslationFrameworkMod.IsInitialized}");
-            Log.Message($"  Loaded Patches: {TranslationFrameworkMod.LoadedPatchesCount}");
-            Log.Message($"  {TranslationCache.GetCacheStats()}");
-            
+//             Log.Message($"[UTF DEBUG] Framework Status:");
+//             Log.Message($"  Initialized: {TranslationFrameworkMod.IsInitialized}");
+//             Log.Message($"  Loaded Patches: {TranslationFrameworkMod.LoadedPatchesCount}");
+//             Log.Message($"  {TranslationCache.GetCacheStats()}");
+
             // Memory usage information
             var memoryBefore = GC.GetTotalMemory(false);
             GC.Collect();
             var memoryAfter = GC.GetTotalMemory(true);
-            Log.Message($"  Memory Usage: {memoryAfter / 1024 / 1024}MB (freed {(memoryBefore - memoryAfter) / 1024}KB)");
+//             Log.Message($"  Memory Usage: {memoryAfter / 1024 / 1024}MB (freed {(memoryBefore - memoryAfter) / 1024}KB)");
         }
 
         /// <summary>
@@ -220,15 +226,15 @@ namespace UniversalTranslationFramework
         {
             const int iterations = 1000;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            
+
             for (int i = 0; i < iterations; i++)
             {
                 TranslationCache.GetCacheStats();
             }
-            
+
             stopwatch.Stop();
-            Log.Message($"[UTF DEBUG] Benchmark: {iterations} cache operations in {stopwatch.ElapsedMilliseconds}ms " +
-                       $"({(double)stopwatch.ElapsedMilliseconds / iterations:F3}ms per operation)");
+//             Log.Message($"[UTF DEBUG] Benchmark: {iterations} cache operations in {stopwatch.ElapsedMilliseconds}ms " +
+            // $"({(double)stopwatch.ElapsedMilliseconds / iterations:F3}ms per operation)");
         }
     }
 }
